@@ -16,13 +16,6 @@ load_dotenv()
 API_KEY = os.getenv("API_KEY")
 API_BASE_URL = os.getenv("API_BASE_URL")
 
-# ==============================
-# Derived API endpoints
-# ==============================
-API_UPLOAD_DOCUMENT = f"{API_BASE_URL}/exploreupload"
-API_ANALYSIS_STATUS = f"{API_BASE_URL}/get_analysis"
-API_UPLOAD_HEATMAP = f"{API_BASE_URL}/upload_heatmap"
-
 HEADERS = {"Authorization": f"Bearer {API_KEY}"}
 
 # ==============================
@@ -38,7 +31,7 @@ st.set_page_config(
 # ==============================
 st.title("💝 Medalyze")
 st.subheader("Medical CallChat Analysis")
-st.write("Analyze your medical call transcripts with ease!")
+st.write("Upload transcripts, visualize rubric scores, and send heatmap to NeuralSeek.")
 
 # ==============================
 # Tabs
@@ -63,12 +56,28 @@ with tab1:
 
             for doc in upload_transcripts:
                 with st.spinner(f"Uploading {doc.name}..."):
-                    files = {"file": (doc.name, doc, doc.type)}
+                    # Read file and encode as base64
+                    file_bytes = doc.read()
+                    file_b64 = base64.b64encode(file_bytes).decode("utf-8")
+
+                    payload = {
+                        "ntl": "",
+                        "agent": "Agent-1",  # replace with your agent name
+                        "params": [
+                            {"name": "file_name", "value": doc.name},
+                            {"name": "file_content_base64", "value": file_b64}
+                        ],
+                        "options": {
+                            "timeout": 600000,
+                            "streaming": False
+                        }
+                    }
+
                     try:
-                        response = requests.post(API_UPLOAD_DOCUMENT, files=files, headers=HEADERS)
+                        response = requests.post(API_BASE_URL, json=payload, headers=HEADERS)
                         response.raise_for_status()
                         result = response.json()
-                        result["file_name"] = doc.name  # store filename for row labels
+                        result["file_name"] = doc.name
                         all_analysis_results.append(result)
                     except Exception as e:
                         st.error(f"Failed to upload {doc.name}: {e}")
@@ -91,9 +100,41 @@ with tab2:
     row_labels = []
 
     for result in st.session_state["all_analysis_results"]:
-        matrix = np.array(result["matrix"])
-        all_matrices.append(matrix)
-        row_labels.extend(result.get("row_labels", [f"{result['file_name']} {i+1}" for i in range(matrix.shape[0])]))
+        # Fetch analysis for each transcript via agent
+        analysis_id = result.get("analysis_id", "")
+        if not analysis_id:
+            st.warning(f"No analysis ID for {result['file_name']}")
+            continue
+
+        st.info(f"Fetching analysis for {result['file_name']}...")
+        payload = {
+            "ntl": "",
+            "agent": "Agent-3",  # replace with your agent name
+            "params": [
+                {"name": "analysis_id", "value": analysis_id}
+            ],
+            "options": {
+                "timeout": 600000,
+                "streaming": False
+            }
+        }
+
+        try:
+            analysis_response = requests.post(API_BASE_URL, json=payload, headers=HEADERS)
+            analysis_response.raise_for_status()
+            analyzed_data = analysis_response.json()
+            matrix = np.array(analyzed_data.get("matrix", []))
+            if matrix.size == 0:
+                st.warning(f"No matrix returned for {result['file_name']}")
+                continue
+            all_matrices.append(matrix)
+            row_labels.extend(analyzed_data.get("row_labels", [f"{result['file_name']} {i+1}" for i in range(matrix.shape[0])]))
+        except Exception as e:
+            st.error(f"Failed to fetch analysis for {result['file_name']}: {e}")
+
+    if not all_matrices:
+        st.error("No valid analysis data available to plot.")
+        st.stop()
 
     combined_matrix = np.vstack(all_matrices)
     n_criteria = combined_matrix.shape[1]
@@ -116,24 +157,29 @@ with tab2:
     ax.set_title("Rubric Heatmap for All Transcripts")
     st.pyplot(fig)
 
-    # Send heatmap to NeuralSeek/mAIstral for mass email
+    # Send heatmap to NeuralSeek via mAIstral agent
     if st.button("Send Heatmap to NeuralSeek for Email"):
         buf = io.BytesIO()
-        fig.savefig(buf, format="png")
+        fig.savefig(buf, format="png", bbox_inches="tight")
         buf.seek(0)
-        heatmap_base64 = base64.b64encode(buf.read()).decode("utf-8")
+        heatmap_b64 = base64.b64encode(buf.read()).decode("utf-8")
 
         payload = {
-            "filename": "heatmap.png",
-            "image_base64": heatmap_base64
+            "ntl": "",
+            "agent": "Agent-4",  # replace with your agent name
+            "params": [
+                {"name": "file_name", "value": "heatmap.png"},
+                {"name": "file_content_base64", "value": heatmap_b64}
+            ],
+            "options": {
+                "timeout": 600000,
+                "streaming": False
+            }
         }
 
         try:
-            upload_resp = requests.post(API_UPLOAD_HEATMAP, json=payload, headers=HEADERS)
-            if upload_resp.status_code == 200:
-                st.success("✅ Heatmap successfully uploaded for mass email!")
-            else:
-                st.error(f"❌ Upload failed with status {upload_resp.status_code}")
-                st.write(upload_resp.text)
+            upload_resp = requests.post(API_BASE_URL, json=payload, headers=HEADERS)
+            upload_resp.raise_for_status()
+            st.success("✅ Heatmap successfully sent to NeuralSeek via agent!")
         except Exception as e:
             st.error(f"❌ Could not send heatmap: {e}")
