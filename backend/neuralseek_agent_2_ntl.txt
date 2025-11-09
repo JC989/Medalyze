@@ -1,0 +1,54 @@
+<< name: document, prompt: false >>
+{{ PII  }}=>{{ variable  | name: "cleanedDocument" }}
+{{ extract  }}=>{{ jsonToVars  }}
+{{ LLM  | prompt: "Analyze the following medical meeting notes and produce a clean, detailed, and organized summary.
+
+Do NOT use Markdown symbols (like ** or ##).  
+Write in full sentences and use clear section titles on separate lines.  
+Each section should have a blank line between it and the next one.
+
+Your summary should include: 
+
+Meeting Overview:
+- Briefly explain the purpose and who was present.
+
+Patient Details:
+- List each patient discussed with age, symptoms, and any relevant notes.
+
+Findings and Observations:
+- Describe patterns or correlations noticed across patients.
+
+Analysis and Insights:
+- Provide reasoning or explanations for any trends found.
+
+Recommendations:
+- Suggest which department(s) this report should go to and why.
+
+Next Steps:
+- Mention follow-up actions or further tests needed.
+
+Everything above should be put in headings with their respective paragraphs, and space between the lines
+
+Keep the language formal, clear, and medically appropriate.
+
+Here is the text to analyze:
+{{cleanedDocument}}" | cache: "true" }}=>{{ variable  | name: "summary" }}
+<< name: summary, prompt: false >>
+...
+{{ createPDF  | file: "summary_document.pdf" }}
+{{ LLM  | prompt: "Analyze the following medical summary and determine which of the following departments Neurology, Cardiology, Gynecology, or Anesthesiology, would find this report most relevant. Only use \"Neurology\", \"Gynecology\", \"Cardiology\", or \"Anesthesiology\". Don't use any department other than these four.
+
+Base your decision on keywords, medical conditions, or context within the summary. 
+If more than one department would find it useful, list all relevant departments in order of priority.
+
+Return your answer in JSON format as follows:
+{
+  \"departments\": [\"Neurology\", \"Cardiology\"],
+  \"reasoning\": \"The report mentions headaches and brain imaging, suggesting Neurology is primary.\"
+}
+
+Summary:
+<< name: summary, prompt: false >>" | cache: "true" }}=>{{ extractCode  }}=>{{ jsonToVars  }}
+{{ variableLoop  | variable: "departments" | loopType: "" }}
+{{ maistro  | template: "Agent-4" }}
+{{ endLoop  | sleep: "0" }}

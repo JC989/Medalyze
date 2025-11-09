@@ -1,0 +1,21 @@
+{{ variable  | name: "department" | value: "<< name: loopValue, prompt: false >>" | mode: "overwrite" }}
+Please generate an email summary of the medical call evaluation scores for patient << patientData >> based on the attached rubric heatmap.
+
+File content: << heatmapImage >>=>{{ variable  | name: "heatmap" }}
+{{ condition  | value: "'<< name: department, prompt: false >>' == ''" }}=>{{ LLM  | prompt: "The department tag is missing from the data. Please specify the department for this case: Neurology, Cardiology, Gynecology, or Anesthesiology." | cache: "true" }}
+{{ condition  | value: "'<< name: department, prompt: false >>' == 'Neurology'" }}=>{{ variable  | name: "email" | value: "cheriefmillan@gmail.com" | mode: "overwrite" }}
+{{ condition  | value: "'<< name: department, prompt: false >>' == 'Cardiology'" }}=>{{ variable  | name: "email" | value: "kenethexposito@gmail.com
+" | mode: "overwrite" }}
+{{ condition  | value: "'<< name: department, prompt: false >>' == 'Gynechology'" }}=>{{ variable  | name: "email" | value: "fionavladi18@gmail.com" | mode: "overwrite" }}
+{{ condition  | value: "'<< name: department, prompt: false >>' == 'Anesthesiology'" }}=>{{ variable  | name: "email" | value: "jeancarlochajon@gmail.com" | mode: "overwrite" }}
+{{ LLM  | prompt: "Combine the following patient data and heatmap image into a single summarized report. Ensure the report is clear and concise.\n\nPatient Data:\n<< name: patientData, prompt: false >>\n\nHeatmap Image:\n<< name: heatmap, prompt: false >>" | cache: "true" }}=>{{ variable  | name: "dataSummary" }}
+{{ email  | host: "smtp.gmail.com" | port: "587" | user: "fionavladi18@gmail.com" | pass: "sarm ttei prvt wnfp" | from: "<< name: email, prompt: false >>" | to: "<< name: email, prompt: false >>" | subject: "Patient Diagnostic Report for <<name: department, prompt: false>>" | message: "<<name: dataSummary, prompt: false>>" | attachment: "" }}
+{{ date  | timezone: "UTC+05:00, E" }}=>{{ LLM  | prompt: "Convert the following time string {{currentDate}} from UTC+05:00 to the EST timezone. Only return the final, converted time string." | cache: "true" | modelCard: "ns-GPT4o-mini" }}=>{{ variable  | name: "currentDate" }}
+{{ time  | timezone: "UTC+05:00, E" }}=>{{ variable  | name: "currentTime" }}
+{
+  "department": "<< name: department, prompt: false >>",
+  "delivery_status": "Successful",
+  "data_summary": "<< name: dataSummary, prompt: false >>",
+  "heatmap_status": "Received and attached",
+  "timestamp": "<< name: currentDate, prompt: false >> << name: currentTime, prompt: false >>"
+}

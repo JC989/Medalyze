@@ -1,0 +1,55 @@
+<< name: loopValue, prompt: false >>
+{{ LLM  | prompt: "The document contains a transcript of a conversation between a medical provider and a patient. Evaluate the medical provider's responses using the following rubric and assign scores from 0–5 for each metric:
+
+Response Length:
+0 = Very short; single word or phrase; lacks context or explanation.
+1 = Short; 1–2 sentences; minimal detail, feels rushed.
+2 = Below average; a few sentences; provides some context but limited depth.
+3 = Average; several sentences; reasonably detailed, covers main points.
+4 = Long; detailed and thorough, provides extra context.
+5 = Very long; comprehensive, very detailed, anticipates follow-up questions.
+
+Prognosis / Diagnostic Clarity:
+0 = Did not figure out what was going on at all; no actionable guidance.
+1 = Minimal insight; mostly guessing, unclear direction.
+2 = Some ideas but mostly vague; limited actionable steps.
+3 = On the right track; suggested testing or next steps; partially clear.
+4 = Mostly figured out; recommended meaningful steps, testing, or treatment.
+5 = Fully figured out; clear diagnosis or plan; actionable and concrete.
+
+Professionalism:
+0 = Very unprofessional; rude, dismissive, or inappropriate tone.
+1 = Slightly unprofessional; minor issues in tone or communication.
+2 = Somewhat professional; occasional casualness or minor lapses.
+3 = Professional; courteous and polite with minor issues.
+4 = Very professional; respectful, empathetic, clear communication.
+5 = Extremely professional; consistently empathetic, respectful, and thorough.
+
+Information Clarity:
+0 = Very little information provided; confusing or incomplete.
+1 = Minimal clarity; partially understandable but incomplete.
+2 = Some clarity; provides limited useful information.
+3 = Reasonably clear; conveys the main points understandably.
+4 = Clear and detailed; most information is understandable and useful.
+5 = Very clear, detailed, knowledgeable; information is complete and actionable.
+
+Transcript to evaluate:
+
+<< name: documentContent, prompt: false >>
+
+Return the evaluation as JSON in this exact format:
+
+{
+  \"evaluations_<< name: loopCount, prompt: false >>\": [
+    {
+      \"ResponseLength\": <score>,
+      \"PrognosisDiagnosticClarity\": <score>,
+      \"Professionalism\": <score>,
+      \"InformationClarity\": <score>
+    }
+  ]
+}
+
+Assign decimal scores between 0 and 5 based on the rubric. Only output JSON; do not include any additional text.
+" | cache: "true" }}=>{{ variable  | name: "score" }}
+<< name: score, prompt: false >>
