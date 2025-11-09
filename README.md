@@ -32,9 +32,9 @@ ResumeBeaver/
 ├── frontend/                # React frontend
 │   ├── streamlit_app.py     # Streamlit demo UI
 ├── backend/
-    ├──
-    ├──
-    ├──
-    ├── 
+    ├── neuralseek_agent_1_ntl.txt
+    ├── neuralseek_agent_2_ntl.txt
+    ├── neuralseek_agent_3_ntl.txt
+    ├── neuralseek_agent_4_ntl.txt
 
 ```
